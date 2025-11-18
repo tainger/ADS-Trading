@@ -36,7 +36,6 @@ _templates
 
 howtrader/log/*
 main_window.spec
-*.json
 *.db
 examples/howtrader/*
 *.zip
