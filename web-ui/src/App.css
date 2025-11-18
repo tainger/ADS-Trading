@@ -1,0 +1,492 @@
+.app {
+  min-height: 100vh;
+  background: #0f1419;
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 头部样式 */
+.app-header {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  border-bottom: 1px solid #2d3748;
+  padding: 0;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 15px 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.logo h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.version {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.balance-info {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.balance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.balance-item span {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.balance-item strong {
+  font-size: 16px;
+}
+
+.balance-item.positive strong {
+  color: #48bb78;
+}
+
+.balance-item.negative strong {
+  color: #f56565;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 5px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.nav-tabs button {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.nav-tabs button.active {
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.nav-tabs button:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 主要内容 */
+.app-content {
+  flex: 1;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 市场概览 */
+.market-overview {
+  margin-bottom: 30px;
+}
+
+.market-overview h2 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #e2e8f0;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.market-card {
+  background: #1a202c;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #4299e1;
+  transition: transform 0.2s;
+}
+
+.market-card:hover {
+  transform: translateY(-2px);
+}
+
+.market-card .symbol {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.market-card .price {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.market-card .change.positive {
+  color: #48bb78;
+  font-weight: 600;
+}
+
+.market-card .change.negative {
+  color: #f56565;
+  font-weight: 600;
+}
+
+.market-card .volume {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 5px;
+}
+
+/* 主内容区域 */
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* 交易面板 */
+.trading-card {
+  background: #1a202c;
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid #2d3748;
+}
+
+.trading-card h3 {
+  margin-bottom: 20px;
+  font-size: 20px;
+  color: #e2e8f0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  background: #2d3748;
+  color: white;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: #4299e1;
+}
+
+.side-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.side-buttons button {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #2d3748;
+  background: #2d3748;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.side-buttons button.active.buy {
+  background: #48bb78;
+  border-color: #48bb78;
+  color: white;
+}
+
+.side-buttons button.active.sell {
+  background: #f56565;
+  border-color: #f56565;
+  color: white;
+}
+
+.side-buttons button:hover:not(.active) {
+  background: #4a5568;
+}
+
+.order-preview {
+  background: #2d3748;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.preview-info {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.order-button {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.order-button.buy {
+  background: #48bb78;
+  color: white;
+}
+
+.order-button.sell {
+  background: #f56565;
+  color: white;
+}
+
+.order-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.order-button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* 持仓表格 */
+.portfolio-card,
+.history-card,
+.performance-card {
+  background: #1a202c;
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid #2d3748;
+}
+
+.positions-table {
+  width: 100%;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 15px;
+  padding: 15px;
+  background: #2d3748;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 15px;
+  padding: 15px;
+  border-bottom: 1px solid #2d3748;
+  align-items: center;
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+/* 历史记录 */
+.history-list {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 15px;
+  border-bottom: 1px solid #2d3748;
+  border-left: 4px solid transparent;
+}
+
+.history-item.buy {
+  border-left-color: #48bb78;
+}
+
+.history-item.sell {
+  border-left-color: #f56565;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.trade-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.trade-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  opacity: 0.8;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.side.buy {
+  color: #48bb78;
+  font-weight: 600;
+}
+
+.side.sell {
+  color: #f56565;
+  font-weight: 600;
+}
+
+.time {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* 表现统计 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background: #2d3748;
+  padding: 25px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #4a5568;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #4299e1;
+}
+
+.stat-label {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  opacity: 0.6;
+  font-style: italic;
+}
+
+/* 底部 */
+.app-footer {
+  background: #1a202c;
+  padding: 20px;
+  text-align: center;
+  border-top: 1px solid #2d3748;
+  margin-top: auto;
+}
+
+.app-footer p {
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+/* 滚动条 */
+.history-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.history-list::-webkit-scrollbar-track {
+  background: #2d3748;
+  border-radius: 3px;
+}
+
+.history-list::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 3px;
+}
+
+.history-list::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 15px;
+  }
+
+  .balance-info {
+    gap: 15px;
+  }
+
+  .nav-tabs {
+    overflow-x: auto;
+  }
+
+  .market-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-header,
+  .table-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .trade-main,
+  .trade-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
