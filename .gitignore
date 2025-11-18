@@ -39,3 +39,6 @@ main_window.spec
 *.db
 examples/howtrader/*
 *.zip
+
+web-ui/node_modules
+web-ui/package-lock.json
