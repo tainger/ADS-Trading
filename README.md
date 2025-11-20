@@ -10,6 +10,15 @@
 
 ADS Trading 是一个现代化、高性能的开源量化交易框架。它旨在为交易员和研究者提供一个从策略研究、回测验证到实盘交易的强大一体化解决方案。
 
+### Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=tainger/ADS-Trading&type=Date)](https://star-history.com/#tainger/ADS-Trading&Date)
+
+<p align="right" style="font-size: 14px; color: #555; margin-top: 20px;">
+    <a href="#readme-top" style="text-decoration: none; color: #007bff; font-weight: bold;">
+        ↑ Back to Top ↑
+    </a>
+</p>
 ## ✨ 核心特性
 
 *   **🚀 极致性能**：基于向量化计算与异步IO，提供高速的数据处理与回测体验。
