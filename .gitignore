@@ -34,10 +34,10 @@ _templates
 # Misc
 .DS_Store
 
-howtrader/log/*
+ads-trading/log/*
 main_window.spec
 *.db
-examples/howtrader/*
+examples/ads-trading/*
 *.zip
 
 web-ui/node_modules
