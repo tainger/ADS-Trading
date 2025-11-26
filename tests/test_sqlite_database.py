@@ -7,23 +7,11 @@ from ads_trading.trader.dbconnectors.sqlite_database import SqliteDatabase, DbBa
 from ads_trading.trader.constant import Exchange, Interval
 from ads_trading.trader.object import BarData
 
+
 class TestSqliteDatabase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.test_db_path = "test_database.db"
-        if os.path.exists(cls.test_db_path):
-            os.remove(cls.test_db_path)
-        import ads_trading.trader.utility
-        ads_trading.trader.utility.get_file_path = lambda x: cls.test_db_path
 
     def setUp(self):
         self.db = SqliteDatabase()
-
-    def tearDown(self):
-        self.db.db.drop_tables([DbBarData, DbTickData, DbBarOverview])
-        self.db.db.close()
-        if os.path.exists(self.test_db_path):
-            os.remove(self.test_db_path)
 
     def test_save_and_load_bar_data(self):
         bar = BarData(
@@ -50,6 +38,7 @@ class TestSqliteDatabase(unittest.TestCase):
         )
         self.assertEqual(len(bars), 1)
         self.assertEqual(bars[0].symbol, "BTC")
+
 
 if __name__ == "__main__":
     unittest.main()

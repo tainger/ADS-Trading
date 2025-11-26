@@ -31,7 +31,6 @@ def main():
     print("⏹️  Press Ctrl+C to stop")
     print(f"📊 UI: http://localhost:3000")
 
-
     try:
         server.run(host=args.host, port=args.port, debug=args.debug)
     except KeyboardInterrupt:
