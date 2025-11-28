@@ -143,14 +143,31 @@ class WebServer:
     """Web 服务器"""
 
     def __init__(self):
-        self.app = Flask(__name__)
+        # 创建Flask应用并禁用默认静态文件路由
+        self.app = Flask(__name__, static_folder=None)
+        
+        # 获取当前文件所在目录
+        self.current_dir = os.path.dirname(__file__)
+        self.templates_dir = os.path.join(self.current_dir, 'templates')
+        self.static_dir = os.path.join(self.templates_dir, 'static')
+        
+        # 设置模板目录
+        self.app.template_folder = self.templates_dir
+        
         self.trading_engine = TradingEngine()
         self.setup_routes()
 
     def setup_routes(self):
         """设置路由"""
-
-        # API 路由
+        # 1. 注册根路径路由
+        self.app.add_url_rule('/', view_func=self.serve_index)
+        
+        # 2. 注册测试路由
+        @self.app.route('/test')
+        def test():
+            return "Test route working", 200
+        
+        # 3. 注册API路由
         self.app.add_url_rule('/api/status', view_func=self.api_status, methods=['GET'])
         self.app.add_url_rule('/api/market', view_func=self.api_market_data, methods=['GET'])
         self.app.add_url_rule('/api/balance', view_func=self.api_balance, methods=['GET'])
@@ -159,28 +176,64 @@ class WebServer:
         self.app.add_url_rule('/api/performance', view_func=self.api_performance, methods=['GET'])
         self.app.add_url_rule('/api/order', view_func=self.api_order, methods=['POST'])
 
-        # 静态文件路由 - 处理所有前端路由
-        self.app.add_url_rule('/', view_func=self.serve_index)
-        self.app.add_url_rule('/<path:path>', view_func=self.serve_static)
-
-    def get_web_root(self):
-        """获取 Web 根目录"""
-        current_dir = os.path.dirname(__file__)
-        return os.path.join(current_dir, 'templates')
+        # 4. 注册静态文件路由 - 使用更具体的路径
+        from flask import send_file
+        @self.app.route('/static/js/<path:filename>')
+        def serve_js(filename):
+            """提供JS文件"""
+            import os
+            file_path = os.path.join(self.static_dir, 'js', filename)
+            if os.path.exists(file_path):
+                return send_file(file_path)
+            else:
+                return f"JS file not found: {file_path}", 404
+        
+        @self.app.route('/static/css/<path:filename>')
+        def serve_css(filename):
+            """提供CSS文件"""
+            import os
+            file_path = os.path.join(self.static_dir, 'css', filename)
+            if os.path.exists(file_path):
+                return send_file(file_path)
+            else:
+                return f"CSS file not found: {file_path}", 404
+        
+        @self.app.route('/static/media/<path:filename>')
+        def serve_media(filename):
+            """提供媒体文件"""
+            import os
+            file_path = os.path.join(self.static_dir, 'media', filename)
+            if os.path.exists(file_path):
+                return send_file(file_path)
+            else:
+                return f"Media file not found: {file_path}", 404
+        
+        # 5. 最后注册前端路由处理 - 只处理特定的前端路径模式
+        @self.app.route('/dashboard')
+        @self.app.route('/trading')
+        @self.app.route('/settings')
+        @self.app.route('/history')
+        @self.app.route('/performance')
+        def frontend_routes():
+            """处理前端路由"""
+            return self.serve_index()
+        
 
     def serve_index(self):
         """提供首页"""
-        web_root = self.get_web_root()
-        return send_from_directory(web_root, 'index.html')
+        return send_from_directory(self.build_dir, 'index.html')
 
     def serve_static(self, path):
-        """提供静态文件"""
-        web_root = self.get_web_root()
-        try:
-            return send_from_directory(web_root, path)
-        except:
-            # 如果文件不存在，返回首页（支持前端路由）
-            return send_from_directory(web_root, 'index.html')
+        """提供静态文件 - 处理前端路由和其他静态资源"""
+        file_path = os.path.join(self.build_dir, path)
+        if os.path.isfile(file_path):
+            return send_from_directory(self.build_dir, path)
+        # 如果文件不存在，返回首页（支持前端路由）
+        return send_from_directory(self.build_dir, 'index.html')
+
+    def test(self):
+        """测试路由"""
+        return jsonify({'message': 'Test route works!'})
 
     def api_status(self):
         """API状态"""
@@ -392,7 +445,19 @@ class WebServer:
     """Web 服务器"""
 
     def __init__(self):
-        self.app = Flask(__name__)
+        # Get the absolute path to the build directory
+        self.build_dir = os.path.abspath('/Users/rocky/work/python/ADS-Trading/web-ui/build')
+        static_dir = os.path.join(self.build_dir, 'static')
+        
+        print(f"Build directory: {self.build_dir}")
+        print(f"Static directory: {static_dir}")
+        print(f"Static folder exists: {os.path.exists(static_dir)}")
+        
+        # Initialize Flask app with working static folder configuration
+        self.app = Flask(__name__, 
+                        static_folder=static_dir,
+                        static_url_path='/static')
+                        
         self.trading_engine = TradingEngine()
         self.setup_routes()
 
@@ -408,8 +473,13 @@ class WebServer:
         self.app.add_url_rule('/api/performance', view_func=self.api_performance, methods=['GET'])
         self.app.add_url_rule('/api/order', view_func=self.api_order, methods=['POST'])
 
-        # 静态文件路由 - 处理所有前端路由
+        # Test route - temporarily commented out
+        # self.app.add_url_rule('/test', view_func=self.test)
+
+        # Serve index.html for root path
         self.app.add_url_rule('/', view_func=self.serve_index)
+
+        # Handle frontend routes (React Router) - catch all other paths
         self.app.add_url_rule('/<path:path>', view_func=self.serve_static)
 
     def get_web_root(self):

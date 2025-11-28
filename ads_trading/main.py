@@ -29,7 +29,7 @@ def main():
     print("🚀 Starting ADS Trading System...")
     print(f"📊 Dashboard: http://{args.host}:{args.port}")
     print("⏹️  Press Ctrl+C to stop")
-    print(f"📊 UI: http://localhost:3000")
+    print(f"📊 UI: http://localhost:5000")
 
     try:
         server.run(host=args.host, port=args.port, debug=args.debug)
