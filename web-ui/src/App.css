@@ -727,3 +727,97 @@
     padding: 15px;
   }
 }
+
+/* 添加页面容器样式 */
+.page-container {
+  margin: 20px;
+}
+
+.page-title {
+  color: #1890ff;
+  margin-bottom: 20px;
+}
+
+/* 交易页面样式 */
+.trading-page {
+  background-color: #f8f9fa;
+}
+
+/* 移动端页面样式 */
+.mobile-page {
+  background-color: #e9ecef;
+}
+
+/* 后台管理页面样式 */
+.admin-page {
+  background-color: #dee2e6;
+}
+
+/* 添加导航样式 */
+.navigation-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #f0f2f5;
+  text-align: center;
+}
+
+.navigation-container h1 {
+  color: #1890ff;
+  margin-bottom: 40px;
+  font-size: 2.5rem;
+}
+
+.navigation-links {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 300px;
+}
+
+.nav-link {
+  display: block;
+  padding: 15px 20px;
+  background-color: white;
+  color: #1890ff;
+  text-decoration: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+  background-color: #1890ff;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+/* 添加页面标识样式 */
+.unique-feature {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.unique-feature h2 {
+  color: #1890ff;
+  margin-top: 0;
+}
+
+.trading-feature {
+  border-left: 5px solid #52c41a;
+}
+
+.mobile-feature {
+  border-left: 5px solid #faad14;
+}
+
+.admin-feature {
+  border-left: 5px solid #1890ff;
+}
