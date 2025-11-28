@@ -1,6 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+// 注册Chart.js组件
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 function App() {
   const [marketData, setMarketData] = useState({});
@@ -11,6 +24,20 @@ function App() {
   const [order, setOrder] = useState({ symbol: 'BTC/USDT', side: 'buy', quantity: '' });
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('trading');
+  const [chartData, setChartData] = useState({});
+  const [selectedSymbol, setSelectedSymbol] = useState('BTC/USDT');
+  const [timeRange, setTimeRange] = useState('1h');
+  const chartRef = useRef(null);
+  const priceHistoryRef = useRef({}); // 用于存储价格历史数据
+
+  // 初始化价格历史数据
+  useEffect(() => {
+    Object.keys(marketData).forEach(symbol => {
+      if (!priceHistoryRef.current[symbol]) {
+        priceHistoryRef.current[symbol] = { prices: [], times: [] };
+      }
+    });
+  }, [marketData]);
 
   // 定期获取数据
   useEffect(() => {
@@ -34,10 +61,64 @@ function App() {
       setPositions(positionsRes.data);
       setHistory(historyRes.data);
       setPerformance(performanceRes.data);
+      
+      // 更新价格历史数据
+      updatePriceHistory(marketRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
   };
+
+  const updatePriceHistory = (marketData) => {
+    const now = new Date();
+    const timeLabel = now.toLocaleTimeString();
+    
+    Object.entries(marketData).forEach(([symbol, data]) => {
+      if (!priceHistoryRef.current[symbol]) {
+        priceHistoryRef.current[symbol] = { prices: [], times: [] };
+      }
+      
+      // 添加新的价格数据
+      priceHistoryRef.current[symbol].prices.push(data.price);
+      priceHistoryRef.current[symbol].times.push(timeLabel);
+      
+      // 限制数据点数量（保留最近30个数据点）
+      if (priceHistoryRef.current[symbol].prices.length > 30) {
+        priceHistoryRef.current[symbol].prices.shift();
+        priceHistoryRef.current[symbol].times.shift();
+      }
+    });
+    
+    // 更新图表数据
+    updateChart(selectedSymbol);
+  };
+
+  const updateChart = (symbol) => {
+    if (!priceHistoryRef.current[symbol]) {
+      priceHistoryRef.current[symbol] = { prices: [], times: [] };
+    }
+    
+    const data = {
+      labels: priceHistoryRef.current[symbol].times,
+      datasets: [
+        {
+          label: `${symbol} 价格`,
+          data: priceHistoryRef.current[symbol].prices,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          tension: 0.1,
+          fill: true
+        },
+      ],
+    };
+    
+    setChartData(data);
+  };
+  
+  // 当选择的交易对改变时更新图表
+  useEffect(() => {
+    updateChart(selectedSymbol);
+  }, [selectedSymbol]);
 
   const placeOrder = async () => {
     if (!order.quantity || parseFloat(order.quantity) <= 0) {
@@ -106,7 +187,8 @@ function App() {
             </div>
           </div>
 
-          <nav className="nav-tabs">
+          {/* 桌面端导航 */}
+          <nav className="nav-tabs desktop-nav">
             <button
               className={activeTab === 'trading' ? 'active' : ''}
               onClick={() => setActiveTab('trading')}
@@ -136,20 +218,134 @@ function App() {
       </header>
 
       <div className="app-content">
-        {/* 市场数据概览 */}
-        <section className="market-overview">
-          <h2>实时行情</h2>
-          <div className="market-grid">
-            {Object.entries(marketData).map(([symbol, data]) => (
-              <div key={symbol} className="market-card">
-                <div className="symbol">{symbol}</div>
-                <div className="price">${formatCurrency(data.price)}</div>
-                <div className={`change ${data.change >= 0 ? 'positive' : 'negative'}`}>
-                  {data.change >= 0 ? '↗' : '↘'} {Math.abs(data.change).toFixed(2)}%
-                </div>
-                <div className="volume">量: {data.volume?.toLocaleString()}</div>
+        {/* 移动端专用收益概览组件 */}
+        <div className="mobile-performance-overview">
+          <div className="overview-card">
+            <h3>📊 策略收益</h3>
+            <div className="overview-stats">
+              <div className="overview-item">
+                <span>总资产</span>
+                <strong>${formatCurrency(balance.total)}</strong>
               </div>
-            ))}
+              <div className="overview-item">
+                <span>收益率</span>
+                <strong className={balance.pnl >= 0 ? 'positive' : 'negative'}>
+                  {balance.total > 0 ? ((balance.pnl / (balance.total - balance.pnl)) * 100).toFixed(2) : 0}%
+                </strong>
+              </div>
+              <div className={`overview-item ${balance.pnl >= 0 ? 'positive' : 'negative'}`}>
+                <span>总盈亏</span>
+                <strong>${formatCurrency(balance.pnl)}</strong>
+              </div>
+              <div className="overview-item">
+                <span>交易次数</span>
+                <strong>{performance.total_trades || 0}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* 市场数据概览和图表 */}
+        <section className="market-section">
+          <div className="market-overview">
+            <h2>实时行情</h2>
+            <div className="market-grid">
+              {Object.entries(marketData).map(([symbol, data]) => (
+                <div key={symbol} className={`market-card ${selectedSymbol === symbol ? 'selected' : ''}`} onClick={() => setSelectedSymbol(symbol)}>
+                  <div className="symbol">{symbol}</div>
+                  <div className="price">${formatCurrency(data.price)}</div>
+                  <div className={`change ${data.change >= 0 ? 'positive' : 'negative'}`}>
+                    {data.change >= 0 ? '↗' : '↘'} {Math.abs(data.change).toFixed(2)}%
+                  </div>
+                  <div className="volume">量: {data.volume?.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* 价格走势图 */}
+          <div className="chart-section">
+            <div className="chart-header">
+              <h2>{selectedSymbol} 价格走势</h2>
+              <div className="chart-controls">
+                <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
+                  <option value="1h">1小时</option>
+                  <option value="4h">4小时</option>
+                  <option value="1d">1天</option>
+                </select>
+              </div>
+            </div>
+            <div className="chart-container">
+              {Object.keys(chartData).length > 0 && (
+                <Line 
+                  ref={chartRef}
+                  data={chartData} 
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: window.innerWidth <= 768 ? 'top' : 'top',
+                        labels: {
+                          // 在移动设备上使用更小的字体
+                          font: {
+                            size: window.innerWidth <= 768 ? 12 : 14
+                          }
+                        }
+                      },
+                      tooltip: {
+                        mode: window.innerWidth <= 768 ? 'nearest' : 'index',
+                        intersect: false,
+                        callbacks: {
+                          label: function(context) {
+                            return `${context.dataset.label}: $${formatCurrency(context.parsed.y)}`;
+                          }
+                        }
+                      },
+                      title: {
+                        // 移动设备上隐藏标题
+                        display: window.innerWidth > 768
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: false,
+                        ticks: {
+                          callback: function(value) {
+                            return '$' + formatCurrency(value);
+                          },
+                          // 移动设备上减少刻度数量
+                          maxTicksLimit: window.innerWidth <= 768 ? 4 : 6
+                        }
+                      },
+                      x: {
+                        ticks: {
+                          maxRotation: window.innerWidth <= 768 ? 0 : 45,
+                          minRotation: window.innerWidth <= 768 ? 0 : 45,
+                          // 移动设备上减少标签数量
+                          maxTicksLimit: window.innerWidth <= 768 ? 5 : 10
+                        }
+                      }
+                    },
+                    // 优化移动设备的触摸交互
+                    interaction: {
+                      intersect: false,
+                      mode: window.innerWidth <= 768 ? 'nearest' : 'index'
+                    },
+                    // 移动设备上减少数据点数量
+                    elements: {
+                      point: {
+                        radius: window.innerWidth <= 768 ? 2 : 4,
+                        hoverRadius: window.innerWidth <= 768 ? 4 : 6
+                      },
+                      line: {
+                        borderWidth: window.innerWidth <= 768 ? 2 : 3
+                      }
+                    }
+                  }} 
+                />
+              )}
+            </div>
           </div>
         </section>
 
@@ -310,6 +506,38 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* 移动端底部导航 */}
+      <nav className="mobile-nav">
+        <button
+          className={activeTab === 'trading' ? 'active' : ''}
+          onClick={() => setActiveTab('trading')}
+        >
+          <span className="nav-icon">📊</span>
+          <span className="nav-text">交易</span>
+        </button>
+        <button
+          className={activeTab === 'portfolio' ? 'active' : ''}
+          onClick={() => setActiveTab('portfolio')}
+        >
+          <span className="nav-icon">💼</span>
+          <span className="nav-text">持仓</span>
+        </button>
+        <button
+          className={activeTab === 'history' ? 'active' : ''}
+          onClick={() => setActiveTab('history')}
+        >
+          <span className="nav-icon">📈</span>
+          <span className="nav-text">历史</span>
+        </button>
+        <button
+          className={activeTab === 'performance' ? 'active' : ''}
+          onClick={() => setActiveTab('performance')}
+        >
+          <span className="nav-icon">🎯</span>
+          <span className="nav-text">表现</span>
+        </button>
+      </nav>
 
       <footer className="app-footer">
         <p>ADS Trading System - 嵌入式 Python + React 架构演示</p>
