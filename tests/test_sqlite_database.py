@@ -40,7 +40,7 @@ class TestSqliteDatabase(unittest.TestCase):
         bar = BarData(
             symbol="BTC",
             exchange=Exchange("BINANCE"),
-            datetime=datetime(2023, 1, 1, 0, 0, 0),
+            datetime=datetime(2023, 1, 2, 0, 0, 0),
             interval=Interval("1m"),
             volume=1.0,
             open_interest=0.0,
