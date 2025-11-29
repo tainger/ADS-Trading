@@ -31,6 +31,8 @@ function MobileApp() {
   const chartRef = useRef(null);
   const [isMobileView, setIsMobileView] = useState(true);
   const priceHistoryRef = useRef({}); // 用于存储价格历史数据
+  const [binanceAccount, setBinanceAccount] = useState({}); // 币安账户数据
+  const [binanceLoading, setBinanceLoading] = useState(false); // 币安数据加载状态
 
   // 初始化价格历史数据
   useEffect(() => {
@@ -47,6 +49,19 @@ function MobileApp() {
     const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchBinanceAccountData = async () => {
+    try {
+      setBinanceLoading(true);
+      const response = await axios.get('/api/binance-account');
+      setBinanceAccount(response.data);
+    } catch (error) {
+      console.error('Error fetching Binance account data:', error);
+      setBinanceAccount({ success: false, error: 'Failed to fetch Binance account data' });
+    } finally {
+      setBinanceLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -495,6 +510,87 @@ function MobileApp() {
               </div>
             </section>
           )}
+
+          {/* 币安资产页面 */}
+          {activeTab === 'assets' && (
+            <section className="assets-section">
+              <div className="assets-card">
+                <div className="card-header">
+                  <h3>币安账户资产</h3>
+                  <button 
+                    className="refresh-button" 
+                    onClick={fetchBinanceAccountData} 
+                    disabled={binanceLoading}
+                  >
+                    {binanceLoading ? '🔄 刷新中...' : '🔄 刷新'}
+                  </button>
+                </div>
+                
+                {binanceLoading ? (
+                  <div className="loading-state">加载币安账户数据中...</div>
+                ) : binanceAccount.success ? (
+                  <div className="binance-account-info">
+                    {binanceAccount.account_info && (
+                      <div className="account-details">
+                        {/* 总资产 */}
+                        <div className="total-balance">
+                          <div className="total-label">总资产</div>
+                          <div className="total-value">${formatCurrency(binanceAccount.account_info.total || 0)}</div>
+                        </div>
+
+                        {/* 现货资产 */}
+                        {binanceAccount.account_info.spot && Object.keys(binanceAccount.account_info.spot).length > 0 && (
+                          <div className="account-section">
+                            <div className="section-header">现货账户</div>
+                            <div className="balances-list">
+                              {Object.entries(binanceAccount.account_info.spot).map(([asset, balance]) => (
+                                <div key={asset} className="balance-item">
+                                  <div className="asset-info">
+                                    <div className="asset-name">{asset}</div>
+                                    <div className="asset-balance">{formatNumber(balance, 8)}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 合约资产 */}
+                        {binanceAccount.account_info.futures && Object.keys(binanceAccount.account_info.futures).length > 0 && (
+                          <div className="account-section">
+                            <div className="section-header">合约账户</div>
+                            <div className="balances-list">
+                              {Object.entries(binanceAccount.account_info.futures).map(([asset, balance]) => (
+                                <div key={asset} className="balance-item">
+                                  <div className="asset-info">
+                                    <div className="asset-name">{asset}</div>
+                                    <div className="asset-balance">{formatNumber(balance, 8)}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 如果没有资产 */}
+                        {(!binanceAccount.account_info.spot || Object.keys(binanceAccount.account_info.spot).length === 0) && 
+                         (!binanceAccount.account_info.futures || Object.keys(binanceAccount.account_info.futures).length === 0) && (
+                          <div className="empty-state">暂无资产数据</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="error-state">
+                    <div className="error-message">{binanceAccount.error || 'Failed to fetch Binance account data'}</div>
+                    <button className="retry-button" onClick={fetchBinanceAccountData}>
+                      重试
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
         </div>
       </div>
 
@@ -513,6 +609,16 @@ function MobileApp() {
         >
           <span className="nav-icon">💼</span>
           <span className="nav-text">持仓</span>
+        </button>
+        <button
+          className={activeTab === 'assets' ? 'active' : ''}
+          onClick={() => {
+            setActiveTab('assets');
+            fetchBinanceAccountData();
+          }}
+        >
+          <span className="nav-icon">💰</span>
+          <span className="nav-text">资产</span>
         </button>
         <button
           className={activeTab === 'history' ? 'active' : ''}

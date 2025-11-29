@@ -8,9 +8,8 @@ from tzlocal import get_localzone_name
 
 from .utility import load_json
 
-
 SETTINGS: Dict[str, Any] = {
-    "font.family": "", # font family, if display error, set to one of your system's font
+    "font.family": "",  # font family, if display error, set to one of your system's font
     "font.size": 12,
 
     "log.active": True,
@@ -25,7 +24,7 @@ SETTINGS: Dict[str, Any] = {
     "email.sender": "",
     "email.receiver": "",
 
-    "order_update_interval": 300, # securing correct orders' status by synchronizing/updating orders through rest api
+    "order_update_interval": 300,  # securing correct orders' status by synchronizing/updating orders through rest api
     "position_update_interval": 60,
     "account_update_interval": 60,
     "update_server_time_interval": 300,  # sync with server time
@@ -42,7 +41,10 @@ SETTINGS: Dict[str, Any] = {
     "database.host": "",
     "database.port": 0,
     "database.user": "",
-    "database.password": ""
+    "database.password": "",
+
+    "binance.api_key": "nuOIPVcbx4PU2fwkR8qOhYtgHIBlshuCdRoOYXkVBrQgMAGPykXwXLWsum3sqbMW",
+    "binance.api_secret": "JQDQWyGh6yzv8QYIi3fjypRE5aVCAgAvuMWmbSLEPqQbZs3XXA8YCKMr6ZpBmVjb"
 }
 
 # Load global setting from json file.

@@ -549,29 +549,26 @@
   font-size: 11px;
 }
 
-/* 移动端收益概览组件样式 */
+/* 移动端专用收益概览 */
 .mobile-performance-overview {
-  display: none;
+  margin-bottom: 20px;
 }
 
 .overview-card {
-  background: linear-gradient(135deg, rgba(30, 60, 114, 0.8), rgba(42, 82, 152, 0.8));
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: #1a202c;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #48bb78;
 }
 
 .overview-card h3 {
   margin: 0 0 15px 0;
   font-size: 18px;
-  color: white;
 }
 
 .overview-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 15px;
 }
 
@@ -582,13 +579,12 @@
 }
 
 .overview-item span {
-  font-size: 14px;
+  font-size: 12px;
   opacity: 0.8;
 }
 
 .overview-item strong {
-  font-size: 20px;
-  font-weight: bold;
+  font-size: 16px;
 }
 
 .overview-item.positive strong {
@@ -597,6 +593,113 @@
 
 .overview-item.negative strong {
   color: #f56565;
+}
+
+/* 资产页面样式 */
+.assets-section {
+  margin-bottom: 20px;
+}
+
+.assets-card {
+  background: #1a202c;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #63b3ed;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.refresh-button {
+  background: rgba(99, 179, 237, 0.2);
+  border: 1px solid #63b3ed;
+  color: #63b3ed;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(99, 179, 237, 0.3);
+}
+
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 20px;
+  opacity: 0.8;
+}
+
+.binance-account-info {
+  padding: 10px 0;
+}
+
+.balances-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.balance-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.asset-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.asset-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.asset-balance {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.error-state {
+  text-align: center;
+  padding: 20px;
+}
+
+.error-message {
+  color: #f56565;
+  margin-bottom: 15px;
+}
+
+.retry-button {
+  background: rgba(245, 101, 101, 0.2);
+  border: 1px solid #f56565;
+  color: #f56565;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.retry-button:hover {
+  background: rgba(245, 101, 101, 0.3);
 }
 
 /* 响应式设计 */

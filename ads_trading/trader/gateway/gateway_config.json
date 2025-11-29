@@ -1,0 +1,9 @@
+{
+    "gateways": {
+        "BINANCE": {
+            "module": "binance_gateway",
+            "class": "BinanceGateway",
+            "enabled": true
+        }
+    }
+}

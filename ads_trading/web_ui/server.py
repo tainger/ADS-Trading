@@ -4,6 +4,7 @@ import time
 from flask import Flask, send_from_directory, jsonify, request
 from threading import Thread, Lock
 import random
+from ads_trading.trader.gateway.binance_gateway import BinanceGateway, BinanceGatewayConfig
 
 
 class TradingEngine:
@@ -137,6 +138,168 @@ class TradingEngine:
             'win_rate': round(winning_trades / total_trades * 100, 2) if total_trades > 0 else 0,
             'total_volume': round(sum(t['total'] for t in self.trade_history), 2)
         }
+    
+    def get_binance_account(self):
+        """获取币安账户数据"""
+        try:
+            # 从配置文件加载币安API密钥和密钥
+            from ads_trading.trader.setting import SETTINGS
+            
+            binance_api_key = SETTINGS.get("binance.api_key", "")
+            binance_api_secret = SETTINGS.get("binance.api_secret", "")
+            
+            if not binance_api_key or not binance_api_secret:
+                return {
+                    "success": False,
+                    "error": "币安API密钥或密钥未配置"
+                }
+            
+            # 创建币安网关配置
+            from ads_trading.trader.gateway.binance_gateway import BinanceGatewayConfig
+            from ads_trading.trader.gateway.binance_gateway import BinanceGateway
+            
+            config = BinanceGatewayConfig(
+                api_key=binance_api_key,
+                api_secret=binance_api_secret,
+                proxy_host='',
+                proxy_port=0,
+                testnet=False
+            )
+
+            # 创建币安网关
+            gateway = BinanceGateway()
+            
+            # 连接到币安API
+            connected = gateway.connect(config)
+            if not connected:
+                return {
+                    "success": False,
+                    "error": "币安网关连接失败"
+                }
+
+            # 获取账户余额
+            account_info = {
+                "spot": gateway.get_spot_balance(),
+                "futures": gateway.get_futures_balance(),
+                "total": gateway.get_total_balance()
+            }
+            return {
+                'success': True,
+                'account_info': account_info
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def get_binance_account(self):
+        """获取币安账户数据"""
+        try:
+            # 从配置文件加载币安API密钥和密钥
+            from ads_trading.trader.setting import SETTINGS
+            
+            binance_api_key = SETTINGS.get("binance.api_key", "")
+            binance_api_secret = SETTINGS.get("binance.api_secret", "")
+            
+            if not binance_api_key or not binance_api_secret:
+                return {
+                    "success": False,
+                    "error": "币安API密钥或密钥未配置"
+                }
+            
+            # 创建币安网关配置
+            from ads_trading.trader.gateway.binance_gateway import BinanceGatewayConfig
+            from ads_trading.trader.gateway.binance_gateway import BinanceGateway
+            
+            config = BinanceGatewayConfig(
+                api_key=binance_api_key,
+                api_secret=binance_api_secret,
+                proxy_host='',
+                proxy_port=0,
+                testnet=False
+            )
+
+            # 创建币安网关
+            gateway = BinanceGateway()
+            
+            # 连接到币安API
+            connected = gateway.connect(config)
+            if not connected:
+                return {
+                    "success": False,
+                    "error": "币安网关连接失败"
+                }
+
+            # 获取账户余额
+            account_info = {
+                "spot": gateway.get_spot_balance(),
+                "futures": gateway.get_futures_balance(),
+                "total": gateway.get_total_balance()
+            }
+            return {
+                'success': True,
+                'account_info': account_info
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def get_binance_account(self):
+        """获取币安账户数据"""
+        try:
+            # 从配置文件加载币安API密钥和密钥
+            from ads_trading.trader.setting import SETTINGS
+            
+            binance_api_key = SETTINGS.get("binance.api_key", "")
+            binance_api_secret = SETTINGS.get("binance.api_secret", "")
+            
+            if not binance_api_key or not binance_api_secret:
+                return {
+                    "success": False,
+                    "error": "币安API密钥或密钥未配置"
+                }
+            
+            # 创建币安网关配置
+            from ads_trading.trader.gateway.binance_gateway import BinanceGatewayConfig
+            from ads_trading.trader.gateway.binance_gateway import BinanceGateway
+            
+            config = BinanceGatewayConfig(
+                api_key=binance_api_key,
+                api_secret=binance_api_secret,
+                proxy_host='',
+                proxy_port=0,
+                testnet=False
+            )
+
+            # 创建币安网关
+            gateway = BinanceGateway()
+            
+            # 连接到币安API
+            connected = gateway.connect(config)
+            if not connected:
+                return {
+                    "success": False,
+                    "error": "币安网关连接失败"
+                }
+
+            # 获取账户余额
+            account_info = {
+                "spot": gateway.get_spot_balance(),
+                "futures": gateway.get_futures_balance(),
+                "total": gateway.get_total_balance()
+            }
+            return {
+                'success': True,
+                'account_info': account_info
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
 class WebServer:
@@ -298,14 +461,17 @@ class WebServer:
 
     def run(self, host='0.0.0.0', port=5000, debug=False):
         """启动服务器"""
+        # 设置静态文件缓存控制头
+        @self.app.after_request
+        def add_cache_control(response):
+            if response.content_type.startswith('text/html'):
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+            return response
+        
         print(f"📍 Web UI available at: http://{host}:{port}")
         self.app.run(host=host, port=port, debug=debug, use_reloader=False)
-import os
-import json
-import time
-from flask import Flask, send_from_directory, jsonify, request
-from threading import Thread, Lock
-import random
 
 
 class TradingEngine:
@@ -439,6 +605,60 @@ class TradingEngine:
             'win_rate': round(winning_trades / total_trades * 100, 2) if total_trades > 0 else 0,
             'total_volume': round(sum(t['total'] for t in self.trade_history), 2)
         }
+    
+    def get_binance_account(self):
+        """获取币安账户数据"""
+        try:
+            # 从配置文件加载币安API密钥和密钥
+            from ads_trading.trader.setting import SETTINGS
+            
+            binance_api_key = SETTINGS.get("binance.api_key", "")
+            binance_api_secret = SETTINGS.get("binance.api_secret", "")
+            
+            if not binance_api_key or not binance_api_secret:
+                return {
+                    "success": False,
+                    "error": "币安API密钥或密钥未配置"
+                }
+            
+            # 创建币安网关配置
+            from ads_trading.trader.gateway.binance_gateway import BinanceGatewayConfig
+            from ads_trading.trader.gateway.binance_gateway import BinanceGateway
+            
+            config = BinanceGatewayConfig(
+                api_key=binance_api_key,
+                api_secret=binance_api_secret,
+                proxy_host='',
+                proxy_port=0,
+                testnet=False
+            )
+
+            # 创建币安网关
+            gateway = BinanceGateway()
+            
+            # 连接到币安API
+            connected = gateway.connect(config)
+            if not connected:
+                return {
+                    "success": False,
+                    "error": "币安网关连接失败"
+                }
+
+            # 获取账户余额
+            account_info = {
+                "spot": gateway.get_spot_balance(),
+                "futures": gateway.get_futures_balance(),
+                "total": gateway.get_total_balance()
+            }
+            return {
+                'success': True,
+                'account_info': account_info
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
 class WebServer:
@@ -464,6 +684,11 @@ class WebServer:
     def setup_routes(self):
         """设置路由"""
 
+        # 前端路由 - 返回index.html文件
+        @self.app.route('/')
+        def index():
+            return send_from_directory(self.build_dir, 'index.html')
+
         # API 路由
         self.app.add_url_rule('/api/status', view_func=self.api_status, methods=['GET'])
         self.app.add_url_rule('/api/market', view_func=self.api_market_data, methods=['GET'])
@@ -472,6 +697,7 @@ class WebServer:
         self.app.add_url_rule('/api/history', view_func=self.api_history, methods=['GET'])
         self.app.add_url_rule('/api/performance', view_func=self.api_performance, methods=['GET'])
         self.app.add_url_rule('/api/order', view_func=self.api_order, methods=['POST'])
+        self.app.add_url_rule('/api/binance-account', view_func=self.api_binance_account, methods=['GET'])
 
         # Test route - temporarily commented out
         # self.app.add_url_rule('/test', view_func=self.test)
@@ -534,6 +760,11 @@ class WebServer:
         """性能指标"""
         performance = self.trading_engine.get_performance()
         return jsonify(performance)
+
+    def api_binance_account(self):
+        """币安账户数据"""
+        binance_account = self.trading_engine.get_binance_account()
+        return jsonify(binance_account)
 
     def api_order(self):
         """下单"""
