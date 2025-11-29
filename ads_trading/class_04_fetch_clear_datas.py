@@ -17,25 +17,55 @@ BITFINEX_LIMIT = 5000
 BITMEX_LIMIT = 500
 BINANCE_LIMIT = 500
 
-binance = ccxt.binance()
-binance.load_markets()
-print(binance.symbols)
+# 代理设置示例
+# 如果需要使用代理，可以取消下面的注释并配置您的代理地址
+PROXY = {
+    'http': 'http://127.0.0.1:7890',
+    'https': 'http://127.0.0.1:7890'
+}
+
+# 测试代理配置
+if PROXY:
+    binance = ccxt.binance({
+        'proxies': PROXY
+    })
+    print("使用代理连接到Binance")
+else:
+    binance = ccxt.binance()
+    print("不使用代理连接到Binance")
+
+try:
+    binance.load_markets()
+    print(f"成功连接到Binance，可用交易对数量：{len(binance.symbols)}")
+    print("部分交易对示例：", binance.symbols[:5])
+except Exception as e:
+    print(f"连接Binance失败：{e}")
 
 
-def crawl_exchanges_datas(exchange_name, symbol, start_time, end_time):
+def crawl_exchanges_datas(exchange_name, symbol, start_time, end_time, proxy=None):
     """
     爬取交易所数据的方法.
     :param exchange_name:  交易所名称.
     :param symbol: 请求的symbol: like BTC/USDT, ETH/USD等。
     :param start_time: like 2018-1-1
     :param end_time: like 2019-1-1
+    :param proxy: 代理设置字典，格式: {'http': 'http://ip:port', 'https': 'http://ip:port'}
     :return:
     """
 
+    # 交易所配置
+    exchange_config = {
+        'timeout': 30000,  # 30秒超时
+        'enableRateLimit': True,  # 启用速率限制
+    }
+
+    # 添加代理配置
+    if proxy:
+        exchange_config['proxies'] = proxy
+
     exchange_class = getattr(ccxt, exchange_name)   # 获取交易所的名称 ccxt.binance
-    exchange = exchange_class()  # 交易所的类. 类似 ccxt.bitfinex()
-    print(exchange)
-    # exit()
+    exchange = exchange_class(exchange_config)  # 交易所的类. 类似 ccxt.bitfinex()
+    print(f"交易所配置: {exchange_config}")
 
     current_path = os.getcwd()
     file_dir = os.path.join(current_path, exchange_name, symbol.replace('/', ''))
@@ -43,15 +73,14 @@ def crawl_exchanges_datas(exchange_name, symbol, start_time, end_time):
     if not os.path.exists(file_dir):
         os.makedirs(file_dir)
 
-
     start_time = datetime.datetime.strptime(start_time, '%Y-%m-%d')
     end_time = datetime.datetime.strptime(end_time, '%Y-%m-%d')
 
     start_time_stamp = int(time.mktime(start_time.timetuple())) * 1000
     end_time_stamp = int(time.mktime(end_time.timetuple())) * 1000
 
-    print(start_time_stamp)  # 1529233920000
-    print(end_time_stamp)
+    print(f"开始时间戳: {start_time_stamp}")
+    print(f"结束时间戳: {end_time_stamp}")
 
     limit_count = 500
     if exchange_name == 'bitfinex':
@@ -63,22 +92,24 @@ def crawl_exchanges_datas(exchange_name, symbol, start_time, end_time):
 
     while True:
         try:
-
-            print(start_time_stamp)
+            print(f"正在请求数据，起始时间: {start_time_stamp}")
             data = exchange.fetch_ohlcv(symbol, timeframe='1m', since=start_time_stamp, limit=limit_count)
-            df = pd.DataFrame(data)
 
+            if not data:
+                print("未获取到数据，可能已到达最新数据")
+                break
+
+            df = pd.DataFrame(data)
             df.rename(columns={0: 'open_time', 1: 'open', 2: 'high', 3: 'low', 4: 'close', 5: 'volume'}, inplace=True)
 
-            print(df)
+            print(f"获取到 {len(df)} 条数据")
 
             start_time_stamp = int(df.iloc[-1]['open_time'])  # 获取下一个次请求的时间.
 
             filename = str(start_time_stamp) + '.csv'
             save_file_path = os.path.join(file_dir, filename)
 
-            print("文件保存路径为：%s" % save_file_path)
-            # exit()
+            print(f"文件保存路径为：{save_file_path}")
             df.set_index('open_time', drop=True, inplace=True)
             df.to_csv(save_file_path)
 
@@ -92,8 +123,17 @@ def crawl_exchanges_datas(exchange_name, symbol, start_time, end_time):
 
             time.sleep(3)
 
+        except ccxt.NetworkError as network_error:
+            print(f"网络错误: {network_error}")
+            print("将在10秒后重试...")
+            time.sleep(10)
+        except ccxt.ExchangeError as exchange_error:
+            print(f"交易所错误: {exchange_error}")
+            print("将在10秒后重试...")
+            time.sleep(10)
         except Exception as error:
-            print(error)
+            print(f"其他错误: {error}")
+            print("将在10秒后重试...")
             time.sleep(10)
 
 
@@ -113,7 +153,7 @@ def sample_data_vnpy_data(exchange_name, symbol):
 
     for file in file_paths:
         df = pd.read_csv(file)
-        all_df = all_df.append(df, ignore_index=True)
+        all_df = pd.concat([all_df, df], ignore_index=True)
 
     all_df = all_df.sort_values(by='open_time', ascending=True)
 
@@ -141,18 +181,45 @@ def sample_data_vnpy_data(exchange_name, symbol):
               inplace=True)
 
     df.to_csv(path + '_vnpy.csv')
+    print(f"数据已转换为VNPY格式并保存到: {path + '_vnpy.csv'}")
 
-    print(df)
+    print(df.head())
 
 if __name__ == '__main__':
-    crawl_exchanges_datas('binance', 'BTCUSDT', '2024-11-20', '2025-4-28')
+    # 使用代理示例（取消注释并配置您的代理）
+    # proxy_config = {
+    #     'http': 'http://127.0.0.1:7890',
+    #     'https': 'http://127.0.0.1:7890'
+    # }
+
+    # 不使用代理
+    proxy_config = PROXY
+
+    # 爬取数据
+    crawl_exchanges_datas('binance', 'BTCUSDT', '2024-11-20', '2024-11-21', proxy=proxy_config)
+
+    # 转换为VNPY格式
     sample_data_vnpy_data('binance', 'BTCUSDT')
 
-    # symbol = "BTC/USDT"
-    # crawl_exchanges_datas("binance", symbol, "2017-8-1", "2019-11-14")
+    """
+    关于CCXT代理设置的说明：
+    1. CCXT支持通过'proxies'参数设置HTTP/HTTPS代理
+    2. 代理格式：{'http': 'http://ip:port', 'https': 'http://ip:port'}
+    3. 通常HTTP和HTTPS可以使用相同的代理地址
+    4. 常见的代理端口：7890（Clash/Shadowsocks）、1080（传统Socks5，需要转换为HTTP代理）
+    5. 如果使用Socks5代理，需要先转换为HTTP代理（可以使用工具如privoxy）
+    
+    示例：
+    proxy = {
+        'http': 'http://127.0.0.1:7890',
+        'https': 'http://127.0.0.1:7890'
+    }
+    
+    使用方法：
+    1. 取消上面的proxy_config注释
+    2. 修改为您的代理地址和端口
+    3. 运行脚本即可通过代理访问交易所API
+    """
 
-    # sample_data_vnpy_data('binance', 'ETH/USDT')
-    # sample_data_vnpy_data('binance', 'BTC/USDT')
-    # sample_data_vnpy_data('bitmex', 'BTC/USD')
 
 
