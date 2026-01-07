@@ -3,6 +3,7 @@ import requests
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
+from ads_trading.trader.dbconnectors.sqlite_database import DBCoinAlphaFactor
 
 API_URL = "https://fapi.binance.com/fapi/v1/exchangeInfo"
 KLINES_URL = "https://fapi.binance.com/fapi/v1/klines"
@@ -77,12 +78,15 @@ def analyze_retracement(df, symbol_info, current_time=None):
     if current_time is None:
         current_time = datetime.now()
 
-    # 定义时间范围
+    # 定义时间范围 - 添加了六个月、八个月、十个月
     time_ranges = {
         '最近一天': timedelta(days=1),
         '最近一个星期': timedelta(weeks=1),
         '最近一个月': timedelta(days=30),
         '最近四个月': timedelta(days=120),
+        '最近六个月': timedelta(days=180),  # 新增
+        '最近八个月': timedelta(days=240),  # 新增
+        '最近十个月': timedelta(days=300),  # 新增
         '最近一年': timedelta(days=365),
         '最近二年': timedelta(days=730),
         '最近三年': timedelta(days=1095)
@@ -189,32 +193,39 @@ def print_analysis_report(symbol_info, results, df):
     if not results or df is None or len(df) == 0:
         return
 
-    print("=" * 80)
+    print("=" * 100)
     print(f"📊 交易对: {symbol_info}")
     print(f"📅 数据时间段: {safe_strftime(df['open_time'].min())} 到 {safe_strftime(df['open_time'].max())}")
     print(f"📈 总数据点数: {len(df)}")
-    print("=" * 80)
+    print("=" * 100)
 
-    # 打印统计表格
+    # 打印统计表格 - 调整宽度以容纳更多列
     print("\n📋 不同时间范围回撤统计:")
-    print("-" * 120)
-    header = f"{'时间范围':<10} {'起始时间':<12} {'数据点':<6} {'最高点':<10} {'最高点时间':<12} {'最低点':<10} {'最低点时间':<12} {'最大回撤':<10} {'当前价':<10} {'高点回撤':<10}"
+    print("-" * 140)
+    header = f"{'时间范围':<10} {'起始时间':<12} {'数据点':<6} {'最高点':<10} {'最高时间':<12} {'最低点':<10} {'最低时间':<12} {'最大回撤':<10} {'当前价':<10} {'高点回撤':<10}"
     print(header)
-    print("-" * 120)
+    print("-" * 140)
 
     for row in results:
+        # 处理None值
+        highest = str(row['最高点']) if row['最高点'] is not None else "N/A"
+        lowest = str(row['最低点']) if row['最低点'] is not None else "N/A"
+        max_retrace = str(row['最高到最低回撤']) if row['最高到最低回撤'] is not None else "N/A"
+        current_price = str(row['当前价格']) if row['当前价格'] is not None else "N/A"
+        from_high = str(row['从最高点回撤']) if row['从最高点回撤'] is not None else "N/A"
+
         print(f"{row['时间范围']:<10} "
               f"{row['起始时间']:<12} "
               f"{row['数据点数']:<6} "
-              f"{str(row['最高点']):<10} "
+              f"{highest:<10} "
               f"{str(row['最高点时间']):<12} "
-              f"{str(row['最低点']):<10} "
+              f"{lowest:<10} "
               f"{str(row['最低点时间']):<12} "
-              f"{str(row['最高到最低回撤']):<10} "
-              f"{str(row['当前价格']):<10} "
-              f"{str(row['从最高点回撤']):<10}")
+              f"{max_retrace:<10} "
+              f"{current_price:<10} "
+              f"{from_high:<10}")
 
-    print("-" * 120)
+    print("-" * 140)
 
     # 关键洞察
     print_key_insights(results)
@@ -228,32 +239,107 @@ def print_key_insights(results):
     print("\n🔍 关键洞察:")
     print("-" * 40)
 
-    # 找到最大回撤的时间范围
-    valid_results = [r for r in results if r['最高到最低回撤'] is not None]
+    # 重新排序结果以便分析
+    # 定义分析顺序（从短期到长期）
+    analysis_order = [
+        '最近一天', '最近一个星期', '最近一个月',
+        '最近四个月', '最近六个月', '最近八个月',
+        '最近十个月', '最近一年', '最近二年', '最近三年'
+    ]
+
+    # 按顺序筛选结果
+    ordered_results = []
+    for time_range in analysis_order:
+        for result in results:
+            if result['时间范围'] == time_range:
+                ordered_results.append(result)
+                break
+
+    if not ordered_results:
+        return
+
+    # 1. 分析各时间段的最大回撤
+    valid_results = [r for r in ordered_results if r['最高到最低回撤'] is not None]
     if valid_results:
+        # 找到最大回撤
         max_retracement = max(
             valid_results,
-            key=lambda x: float(x['最高到最低回撤'].replace('%', '')) if x['最高到最低回撤'] else 0
+            key=lambda x: float(x['最高到最低回撤'].replace('%', '')) if x['最高到最低回撤'] and x[
+                '最高到最低回撤'] != 'N/A' else 0
         )
         print(f"📉 最大回撤: '{max_retracement['时间范围']}'，幅度为 {max_retracement['最高到最低回撤']}")
 
-    # 当前回撤状态
-    latest = results[0] if results else None
-    if latest and latest['从最高点回撤']:
-        try:
-            current_retracement = float(latest['从最高点回撤'].replace('%', ''))
-            if current_retracement > 30:
-                print(f"⚠️  深度回调: 较近期高点回撤 {latest['从最高点回撤']}")
-            elif current_retracement > 20:
-                print(f"⚠️  较大回调: 较近期高点回撤 {latest['从最高点回撤']}")
-            elif current_retracement > 10:
-                print(f"📊  正常回调: 较近期高点回撤 {latest['从最高点回撤']}")
-            elif current_retracement > 5:
-                print(f"📈  接近高点: 较近期高点回撤 {latest['从最高点回撤']}")
+        # 分析回撤趋势
+        monthly_results = [r for r in ordered_results if '个月' in r['时间范围']]
+        if len(monthly_results) >= 3:
+            monthly_retracements = []
+            for r in monthly_results:
+                if r['最高到最低回撤'] and r['最高到最低回撤'] != 'N/A':
+                    try:
+                        monthly_retracements.append(float(r['最高到最低回撤'].replace('%', '')))
+                    except:
+                        pass
+
+            if len(monthly_retracements) >= 3:
+                # 检查回撤趋势
+                if monthly_retracements[-1] > monthly_retracements[0]:
+                    print(
+                        f"📈 回撤趋势: 近期({monthly_results[-1]['时间范围']})回撤大于早期({monthly_results[0]['时间范围']})")
+                else:
+                    print(
+                        f"📉 回撤趋势: 近期({monthly_results[-1]['时间范围']})回撤小于早期({monthly_results[0]['时间范围']})")
+
+    # 2. 当前回撤状态（使用最近一个月的数据）
+    monthly_results = [r for r in ordered_results if r['时间范围'] in ['最近一个月', '最近四个月', '最近六个月']]
+
+    for monthly in monthly_results:
+        if monthly and monthly['从最高点回撤'] and monthly['从最高点回撤'] != 'N/A':
+            try:
+                current_retracement = float(monthly['从最高点回撤'].replace('%', ''))
+                time_range_name = monthly['时间范围']
+
+                if current_retracement > 40:
+                    print(f"⚠️  {time_range_name}深度回调: 较近期高点回撤 {monthly['从最高点回撤']}")
+                elif current_retracement > 25:
+                    print(f"⚠️  {time_range_name}较大回调: 较近期高点回撤 {monthly['从最高点回撤']}")
+                elif current_retracement > 15:
+                    print(f"📊  {time_range_name}正常回调: 较近期高点回撤 {monthly['从最高点回撤']}")
+                elif current_retracement > 8:
+                    print(f"📈  {time_range_name}接近高点: 较近期高点回撤 {monthly['从最高点回撤']}")
+                elif current_retracement > 0:
+                    print(f"🚀  {time_range_name}处于高位: 较近期高点回撤 {monthly['从最高点回撤']}")
+                else:
+                    print(f"💹  {time_range_name}创新高: 无回撤")
+                break
+            except ValueError:
+                continue
+
+    # 3. 比较不同时间段的回撤
+    if len(valid_results) >= 3:
+        # 比较短期、中期、长期回撤
+        short_term = next((r for r in ordered_results if r['时间范围'] == '最近一个月'), None)
+        mid_term = next((r for r in ordered_results if r['时间范围'] == '最近六个月'), None)
+        long_term = next((r for r in ordered_results if r['时间范围'] == '最近一年'), None)
+
+        def get_retracement_value(result):
+            if result and result['最高到最低回撤'] and result['最高到最低回撤'] != 'N/A':
+                try:
+                    return float(result['最高到最低回撤'].replace('%', ''))
+                except:
+                    return None
+            return None
+
+        st_val = get_retracement_value(short_term)
+        mt_val = get_retracement_value(mid_term)
+        lt_val = get_retracement_value(long_term)
+
+        if st_val is not None and mt_val is not None and lt_val is not None:
+            if st_val < mt_val < lt_val:
+                print(f"📊 回撤特征: 短期({st_val:.1f}%) < 中期({mt_val:.1f}%) < 长期({lt_val:.1f}%) - 回撤逐渐扩大")
+            elif st_val > mt_val > lt_val:
+                print(f"📊 回撤特征: 短期({st_val:.1f}%) > 中期({mt_val:.1f}%) > 长期({lt_val:.1f}%) - 回撤逐渐收窄")
             else:
-                print(f"🚀  处于高位: 较近期高点回撤 {latest['从最高点回撤']}")
-        except ValueError:
-            pass
+                print(f"📊 回撤特征: 短期{st_val:.1f}% / 中期{mt_val:.1f}% / 长期{lt_val:.1f}% - 震荡整理")
 
 
 def job1():
@@ -277,9 +363,8 @@ def job1():
         symbols = [symbol['symbol'] for symbol in data.get('symbols', [])]
 
         # 只分析前5个交易对（测试用）
-        # symbols_to_analyze = symbols[:5]
-        symbols_to_analyze = symbols
-
+        # symbols_to_analyze = symbols[:5]  # 测试时用前5个
+        symbols_to_analyze = symbols  # 分析所有交易对（慎用，会请求很多次）
 
         for i, symbol_info in enumerate(symbols_to_analyze, 1):
             print(f"\n{'=' * 60}")
