@@ -1,4 +1,3 @@
-# tests/test_sqlite_database.py
 """
 SQLite数据库测试模块
 测试数据库连接、K线数据的保存和加载功能
@@ -118,6 +117,54 @@ class TestSqliteDatabase(unittest.TestCase):
         self.assertEqual(loaded_ticks[0].last_price, 100.5, "行情数据的最新价格不正确")
         self.assertEqual(loaded_ticks[0].bid_price_1, 100.4, "行情数据的买一价不正确")
         self.assertEqual(loaded_ticks[0].ask_price_1, 100.6, "行情数据的卖一价不正确")
+    
+    def test_save_and_load_symbol_factor(self):
+        """测试symbol factor数据的保存和加载功能
+        1. 创建symbol factor数据对象
+        2. 保存symbol factor数据到数据库
+        3. 从数据库加载symbol factor数据
+        4. 验证加载的数据与保存的数据一致
+        """
+        from ads_trading.trader.dbconnectors.sqlite_database import DBCoinAlphaFactor
+        
+        # 创建测试用的symbol factor数据
+        factor = DBCoinAlphaFactor(
+            symbol="BTCUSDT",
+            create_time=datetime(2023, 1, 1, 0, 0, 0),
+            recent_day="30",
+            recent_type="day",
+            start=datetime(2022, 12, 1, 0, 0, 0),
+            highest_time=datetime(2023, 1, 1, 12, 0, 0),
+            highest_price=101.0,
+            lowest_time=datetime(2023, 1, 1, 0, 0, 0),
+            lowest_price=99.0,
+            max_drawdown="-2.0%",
+            high_drawdown="1.0%"
+        )
+        
+        # 测试保存symbol factor数据
+        save_result = self.db.save_symbol_factor([factor])
+        self.assertTrue(save_result, "symbol factor数据保存失败")
+        
+        # 测试加载symbol factor数据
+        loaded_factors = self.db.load_symbol_factor(
+            symbol="BTC",
+            start=datetime(2023, 1, 1, 0, 0, 0),
+            end=datetime(2023, 1, 1, 23, 59, 59)
+        )
+        
+        # 验证加载的数据数量正确
+        self.assertEqual(len(loaded_factors), 1, "加载的symbol factor数据数量不正确")
+        
+        # 验证加载的数据内容正确
+        self.assertEqual(loaded_factors[0].symbol, "BTC", "symbol factor数据的交易对符号不正确")
+        self.assertEqual(loaded_factors[0].recent_day, "30", "symbol factor数据的最近天数不正确")
+        self.assertEqual(loaded_factors[0].highest_price, 101.0, "symbol factor数据的最高价不正确")
+        self.assertEqual(loaded_factors[0].lowest_price, 99.0, "symbol factor数据的最低价不正确")
+        
+        # 清理测试数据
+        # from ads_trading.trader.dbconnectors.sqlite_database import DBCoinAlphaFactor
+        # DBCoinAlphaFactor.delete().where(DBCoinAlphaFactor.symbol == "BTC").execute()
 
 
 if __name__ == "__main__":

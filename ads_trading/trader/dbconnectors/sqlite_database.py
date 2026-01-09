@@ -24,7 +24,6 @@ from ads_trading.trader.database import (
     convert_tz
 )
 
-
 path = str(get_file_path("database.db"))
 db = PeeweeSqliteDatabase(path)
 
@@ -123,14 +122,39 @@ class DbBarOverview(Model):
         indexes = ((("symbol", "exchange", "interval"), True),)
 
 
+class DBCoinAlphaFactor(Model):
+    id = AutoField()
+    symbol: str = CharField()
+    create_time: datetime = DateTimeField()
+    recent_day: str = CharField()
+    recent_type: str = CharField()
+    start: datetime = DateTimeField()
+    highest_time: datetime = DateTimeField()
+    highest_price: float = FloatField(null=True)
+    lowest_time: datetime = DateTimeField()
+    lowest_price: float = FloatField(null=True)
+    max_drawdown: str = CharField()
+    high_drawdown: str = CharField()
+
+    class Meta:
+        database = db
+        indexes = ((("symbol", "create_time"), True),)
+
+
 class SqliteDatabase(BaseDatabase):
     """sqlite Database connector"""
 
     def __init__(self) -> None:
         """"""
         self.db = db
+        
+        # 检查数据库连接状态，避免重复连接
+        if not self.db.is_closed():
+            self.db.close()
+        
+        # 连接数据库并创建表
         self.db.connect()
-        self.db.create_tables([DbBarData, DbTickData, DbBarOverview])
+        self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DBCoinAlphaFactor])
 
     def save_bar_data(self, bars: List[BarData]) -> bool:
         """save bar data"""
@@ -209,13 +233,52 @@ class SqliteDatabase(BaseDatabase):
 
         return True
 
+    def save_symbol_factor(self, factors: List[DBCoinAlphaFactor]) -> bool:
+        """save symbol factor data"""
+        if not factors:
+            return True
+        
+        # 确保DBCoinAlphaFactor表已创建
+        self.db.create_tables([DBCoinAlphaFactor])
+        
+        # 转换为字典列表
+        data = []
+        for factor in factors:
+            # 使用__data__属性获取实际字段数据，避免Peewee内部状态
+            d = factor.__data__
+            data.append(d)
+        
+        # 使用upsert批量插入数据
+        try:
+            with self.db.atomic():
+                for c in chunked(data, 50):
+                    DBCoinAlphaFactor.insert_many(c).on_conflict_replace().execute()
+            return True
+        except Exception as e:
+            print(f"保存symbol factor数据失败: {str(e)}")
+            return False
+    
+    def load_symbol_factor(self, symbol: str, start: datetime, end: datetime) -> List[DBCoinAlphaFactor]:
+        """load symbol factor data"""
+        try:
+            # 查询指定时间范围内的symbol factor数据
+            s = DBCoinAlphaFactor.select().where(
+                (DBCoinAlphaFactor.symbol == symbol)
+                & (DBCoinAlphaFactor.create_time >= start)
+                & (DBCoinAlphaFactor.create_time <= end)
+            ).order_by(DBCoinAlphaFactor.create_time)
+            
+            return list(s)
+        except Exception as e:
+            print(f"加载symbol factor数据失败: {str(e)}")
+            return []
     def load_bar_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        interval: Interval,
-        start: datetime,
-        end: datetime
+            self,
+            symbol: str,
+            exchange: Exchange,
+            interval: Interval,
+            start: datetime,
+            end: datetime
     ) -> List[BarData]:
         """load bar data"""
         s: ModelSelect = (
@@ -248,11 +311,11 @@ class SqliteDatabase(BaseDatabase):
         return bars
 
     def load_tick_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        start: datetime,
-        end: datetime
+            self,
+            symbol: str,
+            exchange: Exchange,
+            start: datetime,
+            end: datetime
     ) -> List[TickData]:
         """load tick data"""
         s: ModelSelect = (
@@ -310,10 +373,10 @@ class SqliteDatabase(BaseDatabase):
         return ticks
 
     def delete_bar_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        interval: Interval
+            self,
+            symbol: str,
+            exchange: Exchange,
+            interval: Interval
     ) -> int:
         """delete bar data"""
         d: ModelDelete = DbBarData.delete().where(
@@ -334,9 +397,9 @@ class SqliteDatabase(BaseDatabase):
         return count
 
     def delete_tick_data(
-        self,
-        symbol: str,
-        exchange: Exchange
+            self,
+            symbol: str,
+            exchange: Exchange
     ) -> int:
         """delete tick data"""
         d: ModelDelete = DbTickData.delete().where(

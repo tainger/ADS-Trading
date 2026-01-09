@@ -2,7 +2,6 @@
 """
 构建脚本 - 修复版本
 """
-import os
 import shutil
 import subprocess
 import sys

@@ -110,6 +110,22 @@ class BaseDatabase(ABC):
         Return data available in database.
         """
         pass
+    
+    def save_symbol_factor(self, factors: List[any]) -> bool:
+        """
+        Save symbol factor data into database.
+        
+        Override this method to implement specific database operations.
+        """
+        return False
+    
+    def load_symbol_factor(self, symbol: str, start: datetime, end: datetime) -> List[any]:
+        """
+        Load symbol factor data from database.
+        
+        Override this method to implement specific database operations.
+        """
+        return []
 
 
 database: Optional[BaseDatabase] = None

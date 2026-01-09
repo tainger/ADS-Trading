@@ -1,644 +1,162 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import React, { useState, useEffect } from 'react';
 import '../App.css';
 
-// 注册Chart.js组件
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
 function MobileApp() {
-  // 移动端页面专属状态
-  const [marketData, setMarketData] = useState({});
-  const [balance, setBalance] = useState({});
-  const [positions, setPositions] = useState({});
-  const [history, setHistory] = useState([]);
-  const [performance, setPerformance] = useState({});
-  const [order, setOrder] = useState({ symbol: 'BTC/USDT', side: 'buy', quantity: '' });
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('trading');
-  const [chartData, setChartData] = useState({});
-  const [selectedSymbol, setSelectedSymbol] = useState('BTC/USDT');
-  const [timeRange, setTimeRange] = useState('1h');
-  const chartRef = useRef(null);
-  const [isMobileView, setIsMobileView] = useState(true);
-  const priceHistoryRef = useRef({}); // 用于存储价格历史数据
-  const [binanceAccount, setBinanceAccount] = useState({}); // 币安账户数据
-  const [binanceLoading, setBinanceLoading] = useState(false); // 币安数据加载状态
+  // 状态管理
+  const [totalAsset, setTotalAsset] = useState(0.47059694);
+  const [todayPnl, setTodayPnl] = useState(0.0025204);
+  const [todayPnlPercent, setTodayPnlPercent] = useState(0.54);
+  const [balances, setBalances] = useState({
+    spot: 0.32239252,
+    funding: 0.08572,
+    alpha: 0.06248442,
+    contract: 0.0,
+    robot: 0.0
+  });
+  const [activeNav, setActiveNav] = useState('asset');
+  const [activeTab, setActiveTab] = useState('overview');
 
-  // 初始化价格历史数据
+  // 模拟时间更新
+  const [currentTime, setCurrentTime] = useState(new Date());
   useEffect(() => {
-    Object.keys(marketData).forEach(symbol => {
-      if (!priceHistoryRef.current[symbol]) {
-        priceHistoryRef.current[symbol] = { prices: [], times: [] };
-      }
-    });
-  }, [marketData]);
-
-  // 定期获取数据
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 3000);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const fetchBinanceAccountData = async () => {
-    try {
-      setBinanceLoading(true);
-      const response = await axios.get('/api/binance-account');
-      setBinanceAccount(response.data);
-    } catch (error) {
-      console.error('Error fetching Binance account data:', error);
-      setBinanceAccount({ success: false, error: 'Failed to fetch Binance account data' });
-    } finally {
-      setBinanceLoading(false);
-    }
+  // 格式化时间
+  const formatTime = (date) => {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   };
 
-  const fetchData = async () => {
-    try {
-      // 模拟数据获取
-      const mockMarketData = {
-        'BTC/USDT': { price: 45000 + Math.random() * 1000, change: (Math.random() - 0.5) * 5, volume: 1000000 },
-        'ETH/USDT': { price: 3000 + Math.random() * 100, change: (Math.random() - 0.5) * 5, volume: 2000000 },
-        'BNB/USDT': { price: 300 + Math.random() * 20, change: (Math.random() - 0.5) * 5, volume: 500000 },
-        'SOL/USDT': { price: 110 + Math.random() * 10, change: (Math.random() - 0.5) * 5, volume: 800000 }
-      };
+  // 资产类型配置
+  const assetTypes = [
+    { key: 'spot', name: '现货', balance: balances.spot, unit: 'USDT', color: '#28a745' },
+    { key: 'funding', name: '资金', balance: balances.funding, unit: 'USDT', color: '#17a2b8' },
+    { key: 'alpha', name: 'Alpha', balance: balances.alpha, unit: 'USDT', color: '#ffc107' },
+    { key: 'contract', name: '合约', balance: balances.contract, unit: 'USDT', color: '#dc3545' },
+    { key: 'robot', name: '交易机器人', balance: balances.robot, unit: 'USDT', color: '#6f42c1' }
+  ];
 
-      const mockBalance = {
-        total: 15000 + Math.random() * 5000,
-        available: 10000 + Math.random() * 2000,
-        pnl: (Math.random() - 0.5) * 2000
-      };
+  // 底部导航配置
+  const bottomNav = [
+    { key: 'home', name: '首页', icon: '🏠' },
+    { key: 'market', name: '行情', icon: '📈' },
+    { key: 'trade', name: '交易', icon: '🔄' },
+    { key: 'contract', name: '合约', icon: '📝' },
+    { key: 'asset', name: '资产', icon: '💰' }
+  ];
 
-      const mockPositions = {
-        'BTC/USDT': { quantity: 0.1 + Math.random() * 0.2, current_price: mockMarketData['BTC/USDT'].price, value: (0.1 + Math.random() * 0.2) * mockMarketData['BTC/USDT'].price },
-        'ETH/USDT': { quantity: 2 + Math.random() * 3, current_price: mockMarketData['ETH/USDT'].price, value: (2 + Math.random() * 3) * mockMarketData['ETH/USDT'].price }
-      };
-
-      const mockHistory = [
-        { id: 1, symbol: 'BTC/USDT', side: 'buy', quantity: 0.1, price: 44500, total: 4450, datetime: '2023-11-15 10:30:00' },
-        { id: 2, symbol: 'ETH/USDT', side: 'buy', quantity: 2, price: 2950, total: 5900, datetime: '2023-11-15 11:45:00' },
-        { id: 3, symbol: 'BNB/USDT', side: 'sell', quantity: 10, price: 290, total: 2900, datetime: '2023-11-15 14:20:00' }
-      ];
-
-      const mockPerformance = {
-        total_trades: 156,
-        win_rate: 68.5,
-        winning_trades: 107,
-        total_volume: 1250000
-      };
-
-      setMarketData(mockMarketData);
-      setBalance(mockBalance);
-      setPositions(mockPositions);
-      setHistory(mockHistory);
-      setPerformance(mockPerformance);
-      
-      // 更新价格历史数据
-      updatePriceHistory(mockMarketData);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
-
-  const updatePriceHistory = (marketData) => {
-    const now = new Date();
-    const timeLabel = now.toLocaleTimeString();
-    
-    Object.entries(marketData).forEach(([symbol, data]) => {
-      if (!priceHistoryRef.current[symbol]) {
-        priceHistoryRef.current[symbol] = { prices: [], times: [] };
-      }
-      
-      // 添加新的价格数据
-      priceHistoryRef.current[symbol].prices.push(data.price);
-      priceHistoryRef.current[symbol].times.push(timeLabel);
-      
-      // 限制数据点数量（保留最近30个数据点）
-      if (priceHistoryRef.current[symbol].prices.length > 30) {
-        priceHistoryRef.current[symbol].prices.shift();
-        priceHistoryRef.current[symbol].times.shift();
-      }
-    });
-    
-    // 更新图表数据
-    updateChart(selectedSymbol);
-  };
-
-  const updateChart = (symbol) => {
-    if (!priceHistoryRef.current[symbol]) {
-      priceHistoryRef.current[symbol] = { prices: [], times: [] };
-    }
-    
-    const data = {
-      labels: priceHistoryRef.current[symbol].times,
-      datasets: [
-        {
-          label: `${symbol} 价格`,
-          data: priceHistoryRef.current[symbol].prices,
-          borderColor: 'rgba(75, 192, 192, 1)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.1,
-          fill: true
-        },
-      ],
-    };
-    
-    setChartData(data);
-  };
-  
-  // 当选择的交易对改变时更新图表
-  useEffect(() => {
-    updateChart(selectedSymbol);
-  }, [selectedSymbol]);
-
-  const placeOrder = async () => {
-    if (!order.quantity || parseFloat(order.quantity) <= 0) {
-      alert('请输入有效的数量');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // 模拟下单
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert(`订单执行成功! ${order.side === 'buy' ? '买入' : '卖出'} ${order.quantity} ${order.symbol}`);
-      setOrder({ ...order, quantity: '' });
-      fetchData();
-    } catch (error) {
-      alert('下单错误: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatCurrency = (value) => {
-    return parseFloat(value || 0).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
-
-  const formatNumber = (value, decimals = 4) => {
-    return parseFloat(value || 0).toLocaleString('en-US', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
-    });
-  };
+  // 顶部导航配置
+  const topTabs = [
+    { key: 'overview', name: '总览' },
+    { key: 'spot', name: '现货' },
+    { key: 'funding', name: '资金' },
+    { key: 'alpha', name: 'Alpha' },
+    { key: 'contract', name: '合约' }
+  ];
 
   return (
-    <div className="app mobile-app">
-      <div className="page-identifier">这是移动端页面的独特内容</div>
-      {/* 顶部导航 */}
-      <header className="app-header">
-        <div className="header-content">
-          <div className="logo">
-            <h1>🚀 ADS Trading</h1>
-            <span className="version">v1.0.0</span>
-          </div>
-
-          <div className="balance-info">
-            <div className="balance-item">
-              <span>总资产:</span>
-              <strong>${formatCurrency(balance.total)}</strong>
-            </div>
-            <div className="balance-item">
-              <span>可用资金:</span>
-              <strong>${formatCurrency(balance.available)}</strong>
-            </div>
-            <div className={`balance-item ${balance.pnl >= 0 ? 'positive' : 'negative'}`}>
-              <span>盈亏:</span>
-              <strong>${formatCurrency(balance.pnl)}</strong>
-            </div>
-          </div>
+    <div className="mobile-app-container">
+      {/* 顶部状态栏 */}
+      <div className="mobile-status-bar">
+        <div className="status-left">
+          <span className="status-time">{formatTime(currentTime)}</span>
         </div>
-      </header>
-
-      <div className="app-content">
-        {/* 移动端专用收益概览组件 */}
-        <div className="mobile-performance-overview">
-          <div className="overview-card">
-            <h3>📊 策略收益</h3>
-            <div className="overview-stats">
-              <div className="overview-item">
-                <span>总资产</span>
-                <strong>${formatCurrency(balance.total)}</strong>
-              </div>
-              <div className="overview-item">
-                <span>收益率</span>
-                <strong className={balance.pnl >= 0 ? 'positive' : 'negative'}>
-                  {balance.total > 0 ? ((balance.pnl / (balance.total - balance.pnl)) * 100).toFixed(2) : 0}%
-                </strong>
-              </div>
-              <div className={`overview-item ${balance.pnl >= 0 ? 'positive' : 'negative'}`}>
-                <span>总盈亏</span>
-                <strong>${formatCurrency(balance.pnl)}</strong>
-              </div>
-              <div className="overview-item">
-                <span>交易次数</span>
-                <strong>{performance.total_trades || 0}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* 市场数据概览和图表 */}
-        <section className="market-section">
-          <div className="market-overview">
-            <h2>实时行情</h2>
-            <div className="market-grid">
-              {Object.entries(marketData).map(([symbol, data]) => (
-                <div key={symbol} className={`market-card ${selectedSymbol === symbol ? 'selected' : ''}`} onClick={() => setSelectedSymbol(symbol)}>
-                  <div className="symbol">{symbol}</div>
-                  <div className="price">${formatCurrency(data.price)}</div>
-                  <div className={`change ${data.change >= 0 ? 'positive' : 'negative'}`}>
-                    {data.change >= 0 ? '↗' : '↘'} {Math.abs(data.change).toFixed(2)}%
-                  </div>
-                  <div className="volume">量: {data.volume?.toLocaleString()}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* 价格走势图 */}
-          <div className="chart-section">
-            <div className="chart-header">
-              <h2>{selectedSymbol} 价格走势</h2>
-              <div className="chart-controls">
-                <select value={timeRange} onChange={(e) => setTimeRange(e.target.value)}>
-                  <option value="1h">1小时</option>
-                  <option value="4h">4小时</option>
-                  <option value="1d">1天</option>
-                </select>
-              </div>
-            </div>
-            <div className="chart-container">
-              {Object.keys(chartData).length > 0 && (
-                <Line 
-                  ref={chartRef}
-                  data={chartData} 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: window.innerWidth <= 768 ? 'top' : 'top',
-                        labels: {
-                          // 在移动设备上使用更小的字体
-                          font: {
-                            size: window.innerWidth <= 768 ? 12 : 14
-                          }
-                        }
-                      },
-                      tooltip: {
-                        mode: window.innerWidth <= 768 ? 'nearest' : 'index',
-                        intersect: false,
-                        callbacks: {
-                          label: function(context) {
-                            return `${context.dataset.label}: $${formatCurrency(context.parsed.y)}`;
-                          }
-                        }
-                      },
-                      title: {
-                        // 移动设备上隐藏标题
-                        display: window.innerWidth > 768
-                      }
-                    },
-                    scales: {
-                      y: {
-                        beginAtZero: false,
-                        ticks: {
-                          callback: function(value) {
-                            return '$' + formatCurrency(value);
-                          },
-                          // 移动设备上减少刻度数量
-                          maxTicksLimit: window.innerWidth <= 768 ? 4 : 6
-                        }
-                      },
-                      x: {
-                        ticks: {
-                          maxRotation: window.innerWidth <= 768 ? 0 : 45,
-                          minRotation: window.innerWidth <= 768 ? 0 : 45,
-                          // 移动设备上减少标签数量
-                          maxTicksLimit: window.innerWidth <= 768 ? 5 : 10
-                        }
-                      }
-                    },
-                    // 优化移动设备的触摸交互
-                    interaction: {
-                      intersect: false,
-                      mode: window.innerWidth <= 768 ? 'nearest' : 'index'
-                    },
-                    // 移动设备上减少数据点数量
-                    elements: {
-                      point: {
-                        radius: window.innerWidth <= 768 ? 2 : 4,
-                        hoverRadius: window.innerWidth <= 768 ? 4 : 6
-                      },
-                      line: {
-                        borderWidth: window.innerWidth <= 768 ? 2 : 3
-                      }
-                    }
-                  }} 
-                />
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* 主要内容区域 */}
-        <div className="main-content">
-          {/* 交易面板 */}
-          {activeTab === 'trading' && (
-            <section className="trading-section">
-              <div className="trading-card">
-                <h3>快速交易</h3>
-
-                <div className="form-group">
-                  <label>交易对:</label>
-                  <select
-                    value={order.symbol}
-                    onChange={(e) => setOrder({...order, symbol: e.target.value})}
-                  >
-                    {Object.keys(marketData).map(symbol => (
-                      <option key={symbol} value={symbol}>{symbol}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label>交易方向:</label>
-                  <div className="side-buttons">
-                    <button
-                      className={order.side === 'buy' ? 'active buy' : ''}
-                      onClick={() => setOrder({...order, side: 'buy'})}
-                    >
-                      🟢 买入
-                    </button>
-                    <button
-                      className={order.side === 'sell' ? 'active sell' : ''}
-                      onClick={() => setOrder({...order, side: 'sell'})}
-                    >
-                      🔴 卖出
-                    </button>
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>数量:</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={order.quantity}
-                    onChange={(e) => setOrder({...order, quantity: e.target.value})}
-                    placeholder="输入交易数量"
-                  />
-                </div>
-
-                <div className="order-preview">
-                  {order.quantity && marketData[order.symbol] && (
-                    <div className="preview-info">
-                      <div>预估金额: <strong>${formatCurrency(marketData[order.symbol].price * order.quantity)}</strong></div>
-                      <div>价格: ${formatCurrency(marketData[order.symbol].price)}</div>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  className={`order-button ${order.side}`}
-                  onClick={placeOrder}
-                  disabled={loading || !order.quantity}
-                >
-                  {loading ? '🔄 执行中...' : order.side === 'buy' ? '🟢 买入' : '🔴 卖出'}
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* 持仓面板 */}
-          {activeTab === 'portfolio' && (
-            <section className="portfolio-section">
-              <div className="portfolio-card">
-                <h3>当前持仓</h3>
-                {Object.keys(positions).length === 0 ? (
-                  <div className="empty-state">暂无持仓</div>
-                ) : (
-                  <div className="positions-table">
-                    <div className="table-header">
-                      <span>交易对</span>
-                      <span>数量</span>
-                      <span>当前价格</span>
-                      <span>市值</span>
-                    </div>
-                    {Object.entries(positions).map(([symbol, data]) => (
-                      <div key={symbol} className="table-row">
-                        <span className="symbol">{symbol}</span>
-                        <span className="quantity">{formatNumber(data.quantity)}</span>
-                        <span className="price">${formatCurrency(data.current_price)}</span>
-                        <span className="value">${formatCurrency(data.value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* 历史记录 */}
-          {activeTab === 'history' && (
-            <section className="history-section">
-              <div className="history-card">
-                <h3>交易历史</h3>
-                {history.length === 0 ? (
-                  <div className="empty-state">暂无交易记录</div>
-                ) : (
-                  <div className="history-list">
-                    {history.slice().reverse().map(trade => (
-                      <div key={trade.id} className={`history-item ${trade.side}`}>
-                        <div className="trade-main">
-                          <span className="symbol">{trade.symbol}</span>
-                          <span className={`side ${trade.side}`}>
-                            {trade.side === 'buy' ? '🟢 买入' : '🔴 卖出'}
-                          </span>
-                          <span className="quantity">{formatNumber(trade.quantity)}</span>
-                        </div>
-                        <div className="trade-details">
-                          <span>价格: ${formatCurrency(trade.price)}</span>
-                          <span>总额: ${formatCurrency(trade.total)}</span>
-                          <span className="time">{trade.datetime}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* 表现统计 */}
-          {activeTab === 'performance' && (
-            <section className="performance-section">
-              <div className="performance-card">
-                <h3>交易表现</h3>
-                <div className="stats-grid">
-                  <div className="stat-card">
-                    <div className="stat-value">{performance.total_trades || 0}</div>
-                    <div className="stat-label">总交易次数</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">{performance.win_rate || 0}%</div>
-                    <div className="stat-label">胜率</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">{performance.winning_trades || 0}</div>
-                    <div className="stat-label">盈利交易</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-value">${formatCurrency(performance.total_volume)}</div>
-                    <div className="stat-label">总交易额</div>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* 币安资产页面 */}
-          {activeTab === 'assets' && (
-            <section className="assets-section">
-              <div className="assets-card">
-                <div className="card-header">
-                  <h3>币安账户资产</h3>
-                  <button 
-                    className="refresh-button" 
-                    onClick={fetchBinanceAccountData} 
-                    disabled={binanceLoading}
-                  >
-                    {binanceLoading ? '🔄 刷新中...' : '🔄 刷新'}
-                  </button>
-                </div>
-                
-                {binanceLoading ? (
-                  <div className="loading-state">加载币安账户数据中...</div>
-                ) : binanceAccount.success ? (
-                  <div className="binance-account-info">
-                    {binanceAccount.account_info && (
-                      <div className="account-details">
-                        {/* 总资产 */}
-                        <div className="total-balance">
-                          <div className="total-label">总资产</div>
-                          <div className="total-value">${formatCurrency(binanceAccount.account_info.total || 0)}</div>
-                        </div>
-
-                        {/* 现货资产 */}
-                        {binanceAccount.account_info.spot && Object.keys(binanceAccount.account_info.spot).length > 0 && (
-                          <div className="account-section">
-                            <div className="section-header">现货账户</div>
-                            <div className="balances-list">
-                              {Object.entries(binanceAccount.account_info.spot).map(([asset, balance]) => (
-                                <div key={asset} className="balance-item">
-                                  <div className="asset-info">
-                                    <div className="asset-name">{asset}</div>
-                                    <div className="asset-balance">{formatNumber(balance, 8)}</div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 合约资产 */}
-                        {binanceAccount.account_info.futures && Object.keys(binanceAccount.account_info.futures).length > 0 && (
-                          <div className="account-section">
-                            <div className="section-header">合约账户</div>
-                            <div className="balances-list">
-                              {Object.entries(binanceAccount.account_info.futures).map(([asset, balance]) => (
-                                <div key={asset} className="balance-item">
-                                  <div className="asset-info">
-                                    <div className="asset-name">{asset}</div>
-                                    <div className="asset-balance">{formatNumber(balance, 8)}</div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 如果没有资产 */}
-                        {(!binanceAccount.account_info.spot || Object.keys(binanceAccount.account_info.spot).length === 0) && 
-                         (!binanceAccount.account_info.futures || Object.keys(binanceAccount.account_info.futures).length === 0) && (
-                          <div className="empty-state">暂无资产数据</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="error-state">
-                    <div className="error-message">{binanceAccount.error || 'Failed to fetch Binance account data'}</div>
-                    <button className="retry-button" onClick={fetchBinanceAccountData}>
-                      重试
-                    </button>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
+        <div className="status-right">
+          <span className="status-icon">📶</span>
+          <span className="status-icon">📱</span>
+          <span className="status-icon">🔋</span>
         </div>
       </div>
 
-      {/* 移动端底部导航 */}
-      <nav className="mobile-nav">
-        <button
-          className={activeTab === 'trading' ? 'active' : ''}
-          onClick={() => setActiveTab('trading')}
-        >
-          <span className="nav-icon">📊</span>
-          <span className="nav-text">交易</span>
-        </button>
-        <button
-          className={activeTab === 'portfolio' ? 'active' : ''}
-          onClick={() => setActiveTab('portfolio')}
-        >
-          <span className="nav-icon">💼</span>
-          <span className="nav-text">持仓</span>
-        </button>
-        <button
-          className={activeTab === 'assets' ? 'active' : ''}
-          onClick={() => {
-            setActiveTab('assets');
-            fetchBinanceAccountData();
-          }}
-        >
-          <span className="nav-icon">💰</span>
-          <span className="nav-text">资产</span>
-        </button>
-        <button
-          className={activeTab === 'history' ? 'active' : ''}
-          onClick={() => setActiveTab('history')}
-        >
-          <span className="nav-icon">📈</span>
-          <span className="nav-text">历史</span>
-        </button>
-        <button
-          className={activeTab === 'performance' ? 'active' : ''}
-          onClick={() => setActiveTab('performance')}
-        >
-          <span className="nav-icon">🎯</span>
-          <span className="nav-text">表现</span>
-        </button>
-      </nav>
+      {/* 主内容区域 */}
+      <div className="mobile-main-content">
+        {/* 顶部导航 */}
+        <div className="mobile-top-tabs">
+          {topTabs.map(tab => (
+            <div
+              key={tab.key}
+              className={`top-tab ${activeTab === tab.key ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.name}
+            </div>
+          ))}
+        </div>
 
-      <footer className="app-footer">
-        <p>ADS Trading System - 嵌入式 Python + React 架构演示</p>
-      </footer>
+        {/* 总资产信息 */}
+        <div className="mobile-asset-overview">
+          <div className="asset-total">
+            <div className="asset-label">预估总资产</div>
+            <div className="asset-value">
+              <span className="value-number">{totalAsset.toFixed(8)}</span>
+              <span className="value-currency"> USDT</span>
+            </div>
+          </div>
+          <div className="asset-pnl">
+            <span className="pnl-icon">📈</span>
+            <span className="pnl-value positive">+{todayPnl.toFixed(8)} USDT</span>
+            <span className="pnl-percent positive">(+{todayPnlPercent}%)</span>
+          </div>
+        </div>
+
+        {/* 操作按钮 */}
+        <div className="mobile-action-buttons">
+          <button className="action-btn primary">添加资金</button>
+          <button className="action-btn secondary">转出</button>
+          <button className="action-btn secondary">划转</button>
+        </div>
+
+        {/* 资产分布 */}
+        <div className="mobile-asset-distribution">
+          <div className="distribution-header">
+            <div className="header-left">
+              <span className="header-label">币种</span>
+              <span className="header-label">账户</span>
+            </div>
+            <div className="header-right">
+              <span className="header-icon">⚙️</span>
+            </div>
+          </div>
+
+          <div className="distribution-list">
+            {assetTypes.map(asset => (
+              <div key={asset.key} className="distribution-item">
+                <div className="item-left">
+                  <span className="item-name">{asset.name}</span>
+                  <span className="item-type">{asset.unit}</span>
+                </div>
+                <div className="item-right">
+                  <span className="item-balance">{asset.balance.toFixed(8)}</span>
+                  {asset.balance > 0 && (
+                    <span className="item-convert">
+                      ≈¥{(asset.balance * 7).toFixed(6)} {/* 简单汇率转换模拟 */}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 底部导航 */}
+      <div className="mobile-bottom-nav">
+        {bottomNav.map(nav => (
+          <div
+            key={nav.key}
+            className={`bottom-nav-item ${activeNav === nav.key ? 'active' : ''}`}
+            onClick={() => setActiveNav(nav.key)}
+          >
+            <div className="nav-icon">{nav.icon}</div>
+            <div className="nav-name">{nav.name}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
